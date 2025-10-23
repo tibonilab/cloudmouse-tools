@@ -1,0 +1,8 @@
+{
+    "db_host": "localhost",
+    "db_name": "your_database",
+    "db_user": "your_user",
+    "db_pass": "your_pass",
+    "db_charset": "utf8mb4",
+    "db_collation": "utf8mb4_unicode_ci"
+}
