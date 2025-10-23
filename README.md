@@ -77,9 +77,10 @@ python import_to_cms.py --clean-dir ./docs/clean
 
 ## 📝 Notes
 
-- Doxygen must be installed to generate documentation
+- [Doxygen](https://www.doxygen.nl/) must be installed to generate documentation
 - Tools assume MySQL/MariaDB database
 - CMS structure must have a root "SDK" category
+- CMS import tool is for [tibonilab/managee](https://github.com/tibonilab/managee)
 
 ## 🎯 Complete Quick Start
 ```bash
