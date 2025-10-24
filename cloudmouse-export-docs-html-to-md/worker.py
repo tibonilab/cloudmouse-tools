@@ -17,22 +17,35 @@ def convert_html_to_markdown(html_content):
     Convert HTML to Markdown handling code blocks correctly
     """
     
-    # Step 1: Convert <pre><code class="language-XXX"> to markdown code blocks
-    def replace_code_block(match):
+    # Dictionary to store extracted code blocks
+    code_blocks = {}
+    code_counter = [0]  # Using list to allow modification in nested function
+    
+    # Step 1: Extract and store code blocks with language
+    def extract_code_block(match):
         language = match.group(1) if match.group(1) else ''
         code = match.group(2)
+        
         # Decode HTML entities in code
         code = code.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
         code = code.replace('&quot;', '"').replace('&#39;', "'")
-        return f"\n```{language}\n{code.strip()}\n```\n"
+        code = code.replace('&nbsp;', ' ')
+        
+        # Store the code block
+        placeholder_id = f"CODEBLOCK{code_counter[0]}"
+        code_blocks[placeholder_id] = {'language': language, 'code': code.strip()}
+        code_counter[0] += 1
+        
+        # Return a simple placeholder that html2text will leave as-is
+        return f"\n\n{placeholder_id}\n\n"
     
-    # Pattern to capture pre/code with or without language
+    # Pattern to capture pre/code with language
     pattern = r'<pre>\s*<code\s+class="language-([^"]+)"[^>]*>(.*?)</code>\s*</pre>'
-    html_content = re.sub(pattern, replace_code_block, html_content, flags=re.DOTALL)
+    html_content = re.sub(pattern, extract_code_block, html_content, flags=re.DOTALL)
     
     # Handle code blocks without language specified
     pattern_no_lang = r'<pre>\s*<code[^>]*>(.*?)</code>\s*</pre>'
-    html_content = re.sub(pattern_no_lang, replace_code_block, html_content, flags=re.DOTALL)
+    html_content = re.sub(pattern_no_lang, extract_code_block, html_content, flags=re.DOTALL)
     
     # Step 2: Use html2text for the rest
     h = html2text.HTML2Text()
@@ -43,7 +56,14 @@ def convert_html_to_markdown(html_content):
     
     markdown = h.handle(html_content)
     
-    # Step 3: Final cleanup
+    # Step 3: Restore code blocks with proper markdown formatting
+    for placeholder_id, block_data in code_blocks.items():
+        language = block_data['language']
+        code = block_data['code']
+        markdown_code = f"\n```{language}\n{code}\n```\n"
+        markdown = markdown.replace(placeholder_id, markdown_code)
+    
+    # Step 4: Final cleanup
     # Remove excessive whitespace
     markdown = re.sub(r'\n{3,}', '\n\n', markdown)
     
