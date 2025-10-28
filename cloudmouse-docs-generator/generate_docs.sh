@@ -180,6 +180,7 @@ validate_sdk_structure() {
         "lib/hardware/SimpleBuzzer.h"
         "lib/network/WiFiManager.h"
         "lib/network/WebServerManager.h"
+        "lib/network/BluetoothManager.h"
         "lib/core/Core.h"
         "lib/core/EventBus.h"
         "lib/core/Events.h"
@@ -313,9 +314,12 @@ Total components: $html_count
 - **EncoderManager** (\`encodermanager.html\`) - Rotary encoder input processing  
 - **RotaryEncoderPCNT** (\`rotaryencoderpcnt.html\`) - Cross-platform PCNT abstraction
 - **SimpleBuzzer** (\`simplebuzzer.html\`) - Audio feedback system
-- **WiFiManager** (\`wifimanager.html\`) - WiFi lifecycle management
-- **WebServerManager** (\`webservermanager.html\`) - Captive portal setup
 - **LGFX_ILI9488** (\`lgfx_ili9488.html\`) - Display hardware configuration
+
+### Networking
+- **WiFiManager** (\`wifimanager.html\`) - WiFi lifecycle management
+- **BluetoothManager** (\`bluetoothmanager.html\`) - Bluetooth lifecycle management
+- **WebServerManager** (\`webservermanager.html\`) - Captive portal setup
 
 ### Communication System
 - **EventBus** (\`eventbus.html\`) - Thread-safe inter-task messaging

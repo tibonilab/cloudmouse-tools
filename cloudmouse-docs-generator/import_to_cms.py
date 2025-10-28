@@ -64,7 +64,7 @@ SDK_STRUCTURE = {
         'Networking': {
             'uri': 'networking',
             'description': 'Networking abstraction for connectivity control',
-            'components': ['wifimanager', 'webservermanager']
+            'components': ['wifimanager', 'bluetoothmanager', 'webservermanager']
         },
         'Helpers & Utilities': {
             'uri': 'helpers-utilities',

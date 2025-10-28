@@ -218,6 +218,7 @@ def extract_class_documentation(input_dir, output_dir):
         # Network
         'classCloudMouse_1_1Network_1_1WiFiManager.html': 'WiFiManager',
         'classCloudMouse_1_1Network_1_1WebServerManager.html': 'WebServerManager',
+        'classCloudMouse_1_1Network_1_1BluetoothManager.html': 'BluetoothManager',
         
         # Utils
         'classCloudMouse_1_1Utils_1_1DeviceID.html': 'DeviceID',
@@ -312,6 +313,7 @@ def create_index_file(output_path, components):
 <ul>
     <li><a href="network.html">Network</a> - Network namespace</li>
     <li><a href="wifimanager.html">WiFiManager</a> - WiFi connection lifecycle management</li>
+    <li><a href="bluetoothmanager.html">BluetoothManager</a> - Bluetooth interface for lifecycle management</li>
     <li><a href="webservermanager.html">WebServerManager</a> - Captive portal for device setup</li>
 </ul>
 
