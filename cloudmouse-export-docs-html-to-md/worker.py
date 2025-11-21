@@ -78,21 +78,26 @@ def convert_internal_links(html_content, cms_service_host, uri_to_filename):
         full_tag = match.group(0)
         href = match.group(1)
         
-        # Only process links that start with CMS service host
-        if cms_service_host and href.startswith(cms_service_host):
-            # Get the last segment of the URL (after last /)
-            url_segment = href.rstrip('/').split('/')[-1]
-            
-            # Check if this segment matches any URI in our exported pages
-            if url_segment in uri_to_filename:
-                # Replace entire href with just the markdown filename
-                md_filename = uri_to_filename[url_segment]
-                return full_tag.replace(href, md_filename)
+        # Extract URI segment from href
+        url_segment = None
         
-        # Leave all other links unchanged
+        # Case 1: Absolute link with CMS host
+        if cms_service_host and href.startswith(cms_service_host):
+            url_segment = href.rstrip('/').split('/')[-1]
+        # Case 2: Relative link (starts with / or just the URI)
+        elif href.startswith('/'):
+            url_segment = href.strip('/').split('/')[-1]
+        # Case 3: Direct URI without leading slash
+        elif not href.startswith(('http://', 'https://', '#', 'mailto:')):
+            url_segment = href.split('/')[-1]
+        
+        # Replace if we found a matching URI
+        if url_segment and url_segment in uri_to_filename:
+            md_filename = uri_to_filename[url_segment]
+            return full_tag.replace(href, md_filename)
+        
         return full_tag
     
-    # Pattern to match href attributes in anchor tags
     pattern = r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>'
     html_content = re.sub(pattern, replace_link, html_content)
     
