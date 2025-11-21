@@ -17,6 +17,7 @@ import sys
 import re
 import argparse
 from pathlib import Path
+from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 from bs4 import BeautifulSoup
@@ -285,46 +286,6 @@ class CMSImporter:
         except Exception as e:
             print(f"❌ Error fixing links: {e}")
             return html_content
-        """Parse index.html to extract component titles and abstracts"""
-        index_file = Path(clean_dir) / 'index.html'
-        component_info = {}
-        
-        try:
-            with open(index_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            soup = BeautifulSoup(content, 'html.parser')
-            
-            # Find all links to component files
-            for link in soup.find_all('a', href=True):
-                href = link.get('href')
-                if href.endswith('.html') and href != 'index.html':
-                    component_name = href.replace('.html', '')
-                    
-                    # Get the link text as title
-                    title = link.get_text().strip()
-                    
-                    # Get the description after the " - " separator
-                    parent_li = link.find_parent('li')
-                    if parent_li:
-                        full_text = parent_li.get_text().strip()
-                        if ' - ' in full_text:
-                            abstract = full_text.split(' - ', 1)[1].strip()
-                        else:
-                            abstract = title  # Fallback to title
-                    else:
-                        abstract = title
-                    
-                    component_info[component_name] = {
-                        'title': title,
-                        'abstract': abstract
-                    }
-                    print(f"📖 Parsed component: {component_name} - {title}")
-            
-            return component_info
-        except Exception as e:
-            print(f"❌ Error parsing index.html: {e}")
-            return {}
 
     def parse_index_html(self, clean_dir):
         """Parse index.html to extract component titles and abstracts"""
@@ -538,7 +499,7 @@ class CMSImporter:
         # Fallback to filename
         return "Documentation"
     
-    def create_page(self, name, category_id, uri, html_content, component_info=None):
+    def create_page(self, name, category_id, uri, html_content, file_mtime, component_info=None):
         """Create or update page"""
         try:
             # Extract title from parsed info or HTML
@@ -557,17 +518,23 @@ class CMSImporter:
             if existing:
                 page_id = existing['id']
                 print(f"📄 Page exists: {name}")
-                # Update content only
-                self.update_page_content(page_id, title, html_content, uri, category_id, component_info)
+                # Update content and last_update_at
+                self.update_page_content(page_id, title, html_content, uri, category_id, file_mtime, component_info)
+                # Update page's last_update_at
+                self.cursor.execute(
+                    "UPDATE pages SET last_update_at = %s WHERE id = %s",
+                    (file_mtime, page_id)
+                )
+                print(f"🕐 Updated last_update_at: {file_mtime}")
             else:
-                # Create new page
+                # Create new page with last_update_at
                 page_query = """
-                INSERT INTO pages (name, category_id, published, template)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO pages (name, category_id, published, template, last_update_at)
+                VALUES (%s, %s, %s, %s, %s)
                 """
-                self.cursor.execute(page_query, (name, category_id, 1, self.template))
+                self.cursor.execute(page_query, (name, category_id, 1, self.template, file_mtime))
                 page_id = self.cursor.lastrowid
-                print(f"🆕 Created page: {name}")
+                print(f"🆕 Created page: {name} (last_update_at: {file_mtime})")
                 
                 # Create page content
                 self.create_page_content(page_id, title, html_content, uri, category_id, component_info)
@@ -577,7 +544,7 @@ class CMSImporter:
             print(f"❌ Error creating page: {e}")
             return None
     
-    def update_page_content(self, page_id, title, html_content, uri, category_id, component_info=None):
+    def update_page_content(self, page_id, title, html_content, uri, category_id, file_mtime, component_info=None):
         """Update existing page content"""
         try:
             # Use parsed component info if available
@@ -779,71 +746,7 @@ class CMSImporter:
         except Error as e:
             print(f"❌ Error in post-processing links: {e}")
             return False
-        """Process all HTML files in clean directory"""
-        clean_path = Path(clean_dir)
-        
-        if not clean_path.exists():
-            print(f"❌ Clean directory not found: {clean_dir}")
-            return False
-        
-        print(f"📁 Processing HTML files from: {clean_dir}")
-        
-        # Parse index.html for component titles and abstracts
-        component_info = self.parse_index_html(clean_dir)
-        if component_info:
-            print(f"📚 Parsed {len(component_info)} components from index.html")
-        else:
-            print("⚠️ No component info parsed, using fallback titles")
-        
-        # Create category structure
-        category_map = self.create_category_structure()
-        
-        # Process each HTML file
-        html_files = list(clean_path.glob("*.html"))
-        if not html_files:
-            print("❌ No HTML files found in clean directory")
-            return False
-        
-        # Exclude index.html from processing
-        html_files = [f for f in html_files if f.name != 'index.html']
-        
-        processed_count = 0
-        for html_file in html_files:
-            component_name = html_file.stem  # filename without extension
-            
-            # Skip if this is index file
-            if component_name == 'index':
-                continue
-            
-            # Find which category this component belongs to
-            category_id = self.find_component_category(component_name, category_map)
-            if not category_id:
-                print(f"⚠️ No category found for component: {component_name}")
-                continue
-            
-            # Read HTML content
-            with open(html_file, 'r', encoding='utf-8') as f:
-                html_content = f.read()
-            
-            # Create/update page with component info
-            page_id = self.create_page(component_name, category_id, component_name, html_content, component_info)
-            if page_id:
-                processed_count += 1
-                print(f"✅ Processed: {component_name}")
-            else:
-                print(f"❌ Failed to process: {component_name}")
-        
-        print(f"🎉 Successfully processed {processed_count} components!")
-        
-        # Post-process links after all pages are imported
-        if processed_count > 0:
-            print("\n🔗 Starting link post-processing phase...")
-            link_success = self.post_process_links()
-            if not link_success:
-                print("⚠️ Link post-processing failed, but pages were imported successfully")
-        
-        return True
-    
+
     def process_html_files(self, clean_dir):
         """Process all HTML files in clean directory"""
         clean_path = Path(clean_dir)
@@ -887,12 +790,16 @@ class CMSImporter:
                 print(f"⚠️ No category found for component: {component_name}")
                 continue
             
+            # Get file modification time
+            file_mtime = datetime.fromtimestamp(html_file.stat().st_mtime)
+            print(f"🕐 File modification time: {file_mtime}")
+            
             # Read HTML content
             with open(html_file, 'r', encoding='utf-8') as f:
                 html_content = f.read()
             
-            # Create/update page with component info
-            page_id = self.create_page(component_name, category_id, component_name, html_content, component_info)
+            # Create/update page with component info and file mtime
+            page_id = self.create_page(component_name, category_id, component_name, html_content, file_mtime, component_info)
             if page_id:
                 processed_count += 1
                 print(f"✅ Processed: {component_name}")
